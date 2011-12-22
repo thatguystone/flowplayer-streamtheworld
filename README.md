@@ -4,6 +4,17 @@ For some unknown reason, StreamTheWorld sends their metadata in cuepoints that F
 plugin wraps the stream (I've only tested the .flv) and transforms onCuePoint stream events in flash into javascript
 onMetaData events that are compatible with normal metadata events.
 
+# Usage
+
+Setup your clip to use "stw" as the provider; for example:
+
+```javascript
+	clip: {
+		provider: 'stw',
+		url: 'http://some.streatheworld/url'
+	}
+```
+
 # Compile
 
 Add this as a plugin to your flowplayer compilation (how to compile flowplayer is outside this scope), and update your
