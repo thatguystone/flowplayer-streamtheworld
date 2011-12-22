@@ -25,3 +25,15 @@ BuiltInConfig.as with the following:
 		}
 	}
 ```
+
+# Downloadable Plugin
+
+Hit the download link and grab the plugin. You can use it just like any other plugin in flowplayer.
+
+```javascript
+	plugins: {
+		stw: {
+			url: 'flowplayer.stw-3.2.7.swf'
+		}
+	}
+```

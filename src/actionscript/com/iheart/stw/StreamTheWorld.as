@@ -16,48 +16,12 @@
  *	along with flowplayer-streamtheworld.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.iheart.stw {
-	import flash.net.NetStream;
-	
-	import org.flowplayer.controller.NetStreamControllingStreamProvider;
-	import org.flowplayer.model.Plugin;
-	import org.flowplayer.model.PluginModel;
-	import org.flowplayer.model.Clip;
-	import org.flowplayer.model.ClipEvent;
-	import org.flowplayer.model.ClipEventType;
+	import org.flowplayer.model.PluginFactory;      
+	import flash.display.Sprite;
 
-	public class StreamTheWorld extends NetStreamControllingStreamProvider implements Plugin {
-		private var _model:PluginModel;
-		private var _clip:Clip;
-		
-		public function getDefaultConfig():Object {
-			return null;
-		}
-		
-		override public function onConfig(model:PluginModel):void {
-			_model = model;
-			_model.dispatchOnLoad();
-		}
-		
-		override protected function doLoad(event:ClipEvent, netStream:NetStream, clip:Clip):void {
-			super.doLoad(event, netStream, clip);
-			_clip = clip;
-			
-			//hijack the netstream's cuepoint event
-			//listening on "clip.onCuepoint" doesn't work properly as that is waiting on a clip event, not a stream event
-			netStream.client.onCuePoint = onCuePoint;
-		}
-		
-		private function onCuePoint(info:Object):void {
-			var obj:Object = {};
-			
-			obj['eventName'] = info['name'];
-			
-			for (var i:String in info["parameters"]) {
-				obj[i] = info["parameters"][i];
-			}
-			
-			_clip.metaData = obj;
-			_clip.dispatch(ClipEventType.METADATA);
+	public class StreamTheWorld extends Sprite implements PluginFactory {
+		public function newPlugin():Object {
+			return new StreamTheWorldProvider();
 		}
 	}
 }
