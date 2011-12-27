@@ -22,14 +22,14 @@ BuiltInConfig.as with the following:
 
 ```actionscript
 	package  {
-		import com.iheart.stw.StreamTheWorld;
+		import com.iheart.stw.StreamTheWorldProvider;
 
 		public class BuiltInConfig {
-			private var stw:StreamTheWorld;
+			private var stw:StreamTheWorldProvider;
 		
 			public static const config:Object = { 
 					stw: {
-						"url": "com.iheart.stw.StreamTheWorld"
+						"url": "com.iheart.stw.StreamTheWorldProvider"
 					}
 				}
 			};
