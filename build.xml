@@ -5,7 +5,7 @@
 
 	<!-- "basename" is the name of this plugin to be used in the SWF file name -->
 	<property name="basename" value="flowplayer.stw" />
-    <property name="releasedir" value="flowplayer.stw" />
+	<property name="releasedir" value="flowplayer.stw" />
 	<property name="plugin-binary" value="${basename}.swf" />
 	<property name="plugin-binary-versioned" value="${basename}-${version}.swf" />
 	<property name="plugin-swc" value="${basename}.swc" />
