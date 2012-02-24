@@ -18,16 +18,27 @@
 package com.iheart.stw {
 	import flash.net.NetStream;
 	
+	import org.flowplayer.controller.ClipURLResolver;
 	import org.flowplayer.controller.NetStreamControllingStreamProvider;
-	import org.flowplayer.model.Plugin;
-	import org.flowplayer.model.PluginModel;
+	import org.flowplayer.controller.StreamProvider;
 	import org.flowplayer.model.Clip;
 	import org.flowplayer.model.ClipEvent;
 	import org.flowplayer.model.ClipEventType;
-
-	public class StreamTheWorldProvider extends NetStreamControllingStreamProvider implements Plugin {
+	import org.flowplayer.model.Plugin;
+	import org.flowplayer.model.PluginModel;
+	import org.flowplayer.model.ProviderModel
+	
+	import flash.events.NetStatusEvent;
+	import flash.net.NetConnection;
+	
+	public class StreamTheWorldProvider extends NetStreamControllingStreamProvider implements Plugin, ClipURLResolver {
 		private var _model:PluginModel;
 		private var _clip:Clip;
+		
+		/**
+		 * Default plugin stuffs
+		 * ------------------------------------------------------------------------------------------------------------
+		 */
 		
 		public function getDefaultConfig():Object {
 			return null;
@@ -35,6 +46,10 @@ package com.iheart.stw {
 		
 		override public function onConfig(model:PluginModel):void {
 			_model = model;
+			
+			//force flowplayer to use THIS plugin as the url resolver, too
+			(_model as ProviderModel).urlResolver = "stw";
+			
 			_model.dispatchOnLoad();
 		}
 		
@@ -47,6 +62,11 @@ package com.iheart.stw {
 			netStream.client.onCuePoint = onCuePoint;
 		}
 		
+		/**
+		 * Cuepoint -> Metadata fix
+		 * ------------------------------------------------------------------------------------------------------------
+		 */
+		
 		private function onCuePoint(info:Object):void {
 			var obj:Object = {};
 			
@@ -58,6 +78,29 @@ package com.iheart.stw {
 			
 			_clip.metaData = obj;
 			_clip.dispatch(ClipEventType.METADATA);
+		}
+		
+		/**
+		 * ClipUrlResolver stuff
+		 * ------------------------------------------------------------------------------------------------------------
+		 */
+		
+		private var _failureListener:Function;
+
+		public function resolve(provider:StreamProvider, clip:Clip, successListener:Function):void {
+			log.info('I MADE IT');
+			_clip = clip;
+			if (successListener != null) {
+				successListener(clip);
+			}
+		}
+
+		public function set onFailure(listener:Function):void {
+			_failureListener = listener;
+		}
+
+		public function handeNetStatusEvent(event:NetStatusEvent):Boolean {
+			return true;
 		}
 	}
 }
