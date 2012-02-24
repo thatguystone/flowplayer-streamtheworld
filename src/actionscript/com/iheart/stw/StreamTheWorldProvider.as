@@ -30,6 +30,9 @@ package com.iheart.stw {
 	
 	import flash.events.NetStatusEvent;
 	import flash.net.NetConnection;
+	import flash.events.Event; 
+	import flash.net.URLLoader;
+	import flash.net.URLRequest;
 	
 	public class StreamTheWorldProvider extends NetStreamControllingStreamProvider implements Plugin, ClipURLResolver {
 		private var _model:PluginModel;
@@ -48,8 +51,8 @@ package com.iheart.stw {
 			_model = model;
 			
 			//force flowplayer to use THIS plugin as the url resolver, too
-			(_model as ProviderModel).urlResolver = "stw";
-			
+			(_model as ProviderModel).urlResolver = "stw";	
+
 			_model.dispatchOnLoad();
 		}
 		
@@ -61,12 +64,12 @@ package com.iheart.stw {
 			//listening on "clip.onCuepoint" doesn't work properly as that is waiting on a clip event, not a stream event
 			netStream.client.onCuePoint = onCuePoint;
 		}
-		
+
 		/**
 		 * Cuepoint -> Metadata fix
 		 * ------------------------------------------------------------------------------------------------------------
 		 */
-		
+
 		private function onCuePoint(info:Object):void {
 			var obj:Object = {};
 			
@@ -86,15 +89,30 @@ package com.iheart.stw {
 		 */
 		
 		private var _failureListener:Function;
-
+		private var _successListener:Function;
+		
 		public function resolve(provider:StreamProvider, clip:Clip, successListener:Function):void {
 			log.info('I MADE IT');
 			_clip = clip;
-			if (successListener != null) {
-				successListener(clip);
-			}
+			_successListener = successListener;
+			
+			var XML_URL:String = "http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=" + _clip.url + "&nobuf=" + Math.random(); 
+			var myXMLURL:URLRequest = new URLRequest(XML_URL); 
+			var myLoader:URLLoader = new URLLoader(myXMLURL); 
+			myLoader.addEventListener(Event.COMPLETE, function xmlLoaded(event:Event):void 
+			{ 
+				var myXML:XML = new XML(); 
+				myXML = XML(myLoader.data); 
+				log.info(myLoader.data);
+			}); 
+			
+			//1: make this service call with the mount that andrew passes in.
+			//http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=KBNAFMAAC&lang=en&nobuf=1330115711626	200	GET	playerservices.streamtheworld.com	/api/livestream?version=1.4&mount=KBNAFMAAC&lang=en&nobuf=1330115711626	 146 ms	1.50 KB	Complete	
+			//2: set this as the _model.url 
+			//http://2633.live.streamtheworld.com/KBNAFMAAC	200	GET	2633.live.streamtheworld.com	/KBNAFMAAC		1.87 MB	Receiving response body
+			
 		}
-
+		
 		public function set onFailure(listener:Function):void {
 			_failureListener = listener;
 		}
