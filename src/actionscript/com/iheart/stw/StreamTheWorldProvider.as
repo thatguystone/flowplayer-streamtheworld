@@ -16,8 +16,6 @@
  *	along with flowplayer-streamtheworld.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.iheart.stw {
-	import flash.net.NetStream;
-	
 	import org.flowplayer.controller.ClipURLResolver;
 	import org.flowplayer.controller.NetStreamControllingStreamProvider;
 	import org.flowplayer.controller.StreamProvider;
@@ -28,15 +26,22 @@ package com.iheart.stw {
 	import org.flowplayer.model.PluginModel;
 	import org.flowplayer.model.ProviderModel
 	
+	import flash.events.Event;
+	import flash.events.HTTPStatusEvent;
+	import flash.events.IOErrorEvent;
 	import flash.events.NetStatusEvent;
 	import flash.net.NetConnection;
-	import flash.events.Event; 
+	import flash.net.NetStream;
 	import flash.net.URLLoader;
 	import flash.net.URLRequest;
 	
 	public class StreamTheWorldProvider extends NetStreamControllingStreamProvider implements Plugin, ClipURLResolver {
 		private var _model:PluginModel;
 		private var _clip:Clip;
+		
+		private var _stream:String;
+		private var _streams:XMLList;
+		private var _currentStream:int;
 		
 		/**
 		 * Default plugin stuffs
@@ -51,6 +56,7 @@ package com.iheart.stw {
 			_model = model;
 			
 			//force flowplayer to use THIS plugin as the url resolver, too
+			//requires modifications to FP core to work
 			(_model as ProviderModel).urlResolver = "stw";	
 
 			_model.dispatchOnLoad();
@@ -88,35 +94,60 @@ package com.iheart.stw {
 		 * ------------------------------------------------------------------------------------------------------------
 		 */
 		
+		//for killing that lame xmlns that screws everything up
+		private const XMLNS_PATTERN:RegExp = new RegExp('xmlns[^\"]*\"[^\"]*\"', 'gi');
+		
 		private var _failureListener:Function;
-		private var _successListener:Function;
+		
+		private function _resolve(clip:Clip, successListener:Function):void {
+			clip.url = 'http://' + _streams[_currentStream].ip + '/' + clip.url;
+			_currentStream = ++_currentStream % _streams.length();
+			successListener(clip);
+		}
 		
 		public function resolve(provider:StreamProvider, clip:Clip, successListener:Function):void {
-			log.info('I MADE IT');
-			_clip = clip;
-			_successListener = successListener;
+			//reset the STW streams tracking only if changing stations
+			if (clip.url != _stream) {
+				_stream = clip.url;
+				_streams = null;
+				_currentStream = 0;
+			}
 			
-			var XML_URL:String = "http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=" + _clip.url + "&nobuf=" + Math.random(); 
-			var myXMLURL:URLRequest = new URLRequest(XML_URL); 
-			var myLoader:URLLoader = new URLLoader(myXMLURL); 
-			myLoader.addEventListener(Event.COMPLETE, function xmlLoaded(event:Event):void 
-			{ 
-				var myXML:XML = new XML(); 
-				myXML = XML(myLoader.data); 
-				log.info(myLoader.data);
-			}); 
+			if (_streams) {
+				_resolve(clip, successListener);
+				return;
+			}
+				
+			var url:String = 'http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=' + clip.url + '&lang=en&nobuf=' + Math.random();
+			var loader:URLLoader = new URLLoader(new URLRequest(url));
+		
+			loader.addEventListener(Event.COMPLETE, function(e:Event):void {
+				var x:XML = new XML(e.target.data.replace(XMLNS_PATTERN, ''));
+				
+				if (x.descendants('status-code') != '200') {
+					_failureListener();
+					return;
+				}
+				
+				_streams = x..mountpoints..server;
+				_resolve(clip, successListener);
+			});
 			
-			//1: make this service call with the mount that andrew passes in.
-			//http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=KBNAFMAAC&lang=en&nobuf=1330115711626	200	GET	playerservices.streamtheworld.com	/api/livestream?version=1.4&mount=KBNAFMAAC&lang=en&nobuf=1330115711626	 146 ms	1.50 KB	Complete	
-			//2: set this as the _model.url 
-			//http://2633.live.streamtheworld.com/KBNAFMAAC	200	GET	2633.live.streamtheworld.com	/KBNAFMAAC		1.87 MB	Receiving response body
+			loader.addEventListener(IOErrorEvent.IO_ERROR, function(e:Event):void {
+				_failureListener();
+			});
 			
+			loader.addEventListener(HTTPStatusEvent.HTTP_STATUS, function(e:HTTPStatusEvent):void {
+				if (e.status != 200) {
+					_failureListener();
+				}
+			});
 		}
 		
 		public function set onFailure(listener:Function):void {
 			_failureListener = listener;
 		}
-
+		
 		public function handeNetStatusEvent(event:NetStatusEvent):Boolean {
 			return true;
 		}
