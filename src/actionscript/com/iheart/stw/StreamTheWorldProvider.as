@@ -25,6 +25,7 @@ package com.iheart.stw {
 	import org.flowplayer.model.Plugin;
 	import org.flowplayer.model.PluginModel;
 	import org.flowplayer.model.ProviderModel
+	import org.flowplayer.util.URLUtil;
 	
 	import flash.events.Event;
 	import flash.events.HTTPStatusEvent;
@@ -99,26 +100,30 @@ package com.iheart.stw {
 		
 		private var _failureListener:Function;
 		
-		private function _resolve(clip:Clip, successListener:Function):void {
-			clip.url = 'http://' + _streams[_currentStream].ip + '/' + clip.url;
+		private function _resolve(clip:Clip, queryString:String, successListener:Function):void {
+			clip.url = 'http://' + _streams[_currentStream].ip + '/' + _stream + queryString;
 			_currentStream = ++_currentStream % _streams.length();
 			successListener(clip);
 		}
 		
 		public function resolve(provider:StreamProvider, clip:Clip, successListener:Function):void {
+			var urlParts:Array = URLUtil.baseUrlAndRest(clip.url),
+				stream:String = urlParts[0].replace('stw://', ''),
+				queryString:String = urlParts[1];
+			
 			//reset the STW streams tracking only if changing stations
-			if (clip.url != _stream) {
-				_stream = clip.url;
+			if (stream != _stream) {
+				_stream = stream;
 				_streams = null;
 				_currentStream = 0;
 			}
 			
 			if (_streams) {
-				_resolve(clip, successListener);
+				_resolve(clip, queryString, successListener);
 				return;
 			}
 				
-			var url:String = 'http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=' + clip.url + '&lang=en&nobuf=' + Math.random();
+			var url:String = 'http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=' + stream + '&lang=en&nobuf=' + Math.random();
 			var loader:URLLoader = new URLLoader(new URLRequest(url));
 		
 			loader.addEventListener(Event.COMPLETE, function(e:Event):void {
@@ -130,7 +135,7 @@ package com.iheart.stw {
 				}
 				
 				_streams = x..mountpoints..server;
-				_resolve(clip, successListener);
+				_resolve(clip, queryString, successListener);
 			});
 			
 			loader.addEventListener(IOErrorEvent.IO_ERROR, function(e:Event):void {
