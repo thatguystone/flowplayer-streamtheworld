@@ -35,6 +35,8 @@ package com.iheart.stw {
 	import flash.net.NetStream;
 	import flash.net.URLLoader;
 	import flash.net.URLRequest;
+	import flash.utils.clearTimeout;
+	import flash.utils.setTimeout;
 	
 	public class StreamTheWorldProvider extends NetStreamControllingStreamProvider implements Plugin, ClipURLResolver {
 		private var _model:PluginModel;
@@ -43,6 +45,8 @@ package com.iheart.stw {
 		private var _stream:String;
 		private var _streams:XMLList;
 		private var _currentStream:int;
+		private var _backoff:int;
+		private var _timeout:int;
 		
 		/**
 		 * Default plugin stuffs
@@ -100,9 +104,23 @@ package com.iheart.stw {
 		
 		private var _failureListener:Function;
 		
+		private function _reset():void {
+			_streams = null;
+			_currentStream = 0;
+		}
+		
 		private function _resolve(clip:Clip, queryString:String, successListener:Function):void {
 			clip.url = 'http://' + _streams[_currentStream].ip + '/' + _stream + queryString;
-			_currentStream = ++_currentStream % _streams.length();
+			
+			_currentStream++;
+			
+			log.info('Resolve: ' + _currentStream + ' == ' + _streams.length());
+			
+			//if we went through the list, then hit them again for a new list
+			if (_currentStream == _streams.length()) {
+				_reset();
+			}
+			
 			successListener(clip);
 		}
 		
@@ -111,21 +129,40 @@ package com.iheart.stw {
 				stream:String = urlParts[0].replace('stw://', ''),
 				queryString:String = urlParts[1];
 			
-			//reset the STW streams tracking only if changing stations
+			//reset the STW streams tracking if changing stations
 			if (stream != _stream) {
 				_stream = stream;
-				_streams = null;
-				_currentStream = 0;
+				_backoff = 0;
+				_reset();
 			}
+			
+			log.info('Backoff: ' + _backoff);
 			
 			if (_streams) {
 				_resolve(clip, queryString, successListener);
 				return;
 			}
+			
+			if (_backoff <= 8) {
+				clearTimeout(_timeout);
+				_timeout = setTimeout(function():void {
+					hitStw(stream, queryString, clip, successListener);
+				}, _backoff);
+			} else {
+				//we can't load this, just die and move on
+				_reset();
+				_backoff = 0;
 				
-			var url:String = 'http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=' + stream + '&lang=en&nobuf=' + Math.random();
-			var loader:URLLoader = new URLLoader(new URLRequest(url));
+				_failureListener();
+			}
+		}
 		
+		private function hitStw(stream:String, queryString:String, clip:Clip, successListener:Function):void {
+			log.info('hitting stw for ' + stream);
+			
+			var url:String = 'http://playerservices.streamtheworld.com/api/livestream?version=1.4&mount=' + stream + '&lang=en&nobuf=' + Math.random(),
+				loader:URLLoader = new URLLoader(new URLRequest(url));
+			
 			loader.addEventListener(Event.COMPLETE, function(e:Event):void {
 				var x:XML = new XML(e.target.data.replace(XMLNS_PATTERN, ''));
 				
@@ -147,7 +184,9 @@ package com.iheart.stw {
 					_failureListener();
 				}
 			});
-		}
+			
+			_backoff = (_backoff || 1) * 2;
+		};
 		
 		public function set onFailure(listener:Function):void {
 			_failureListener = listener;
