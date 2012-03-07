@@ -147,7 +147,7 @@ package com.iheart.stw {
 				clearTimeout(_timeout);
 				_timeout = setTimeout(function():void {
 					hitStw(stream, queryString, clip, successListener);
-				}, _backoff);
+				}, _backoff * 1000);
 			} else {
 				//we can't load this, just die and move on
 				_reset();
