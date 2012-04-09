@@ -24,7 +24,7 @@ package com.iheart.stw {
 	import org.flowplayer.model.ClipEventType;
 	import org.flowplayer.model.Plugin;
 	import org.flowplayer.model.PluginModel;
-	import org.flowplayer.model.ProviderModel
+	import org.flowplayer.model.ProviderModel;
 	import org.flowplayer.util.URLUtil;
 	
 	import flash.events.Event;
