@@ -50,7 +50,7 @@ package com.iheart.stw {
 		
 		/**
 		 * Default plugin stuffs
-		 * ------------------------------------------------------------------------------------------------------------
+		 * ----------------------------------------------------------------------------------------
 		 */
 		
 		public function getDefaultConfig():Object {
@@ -62,7 +62,7 @@ package com.iheart.stw {
 			
 			//force flowplayer to use THIS plugin as the url resolver, too
 			//requires modifications to FP core to work
-			(_model as ProviderModel).urlResolver = "stw";	
+			(_model as ProviderModel).urlResolver = "stw";
 
 			_model.dispatchOnLoad();
 		}
@@ -71,6 +71,9 @@ package com.iheart.stw {
 			super.doLoad(event, netStream, clip);
 			_clip = clip;
 			
+			//make sure that we're recorded as a live stream
+			_clip.live = true;
+			
 			//hijack the netstream's cuepoint event
 			//listening on "clip.onCuepoint" doesn't work properly as that is waiting on a clip event, not a stream event
 			netStream.client.onCuePoint = onCuePoint;
@@ -78,7 +81,7 @@ package com.iheart.stw {
 
 		/**
 		 * Cuepoint -> Metadata fix
-		 * ------------------------------------------------------------------------------------------------------------
+		 * ----------------------------------------------------------------------------------------
 		 */
 
 		private function onCuePoint(info:Object):void {
@@ -96,7 +99,7 @@ package com.iheart.stw {
 		
 		/**
 		 * ClipUrlResolver stuff
-		 * ------------------------------------------------------------------------------------------------------------
+		 * ----------------------------------------------------------------------------------------
 		 */
 		
 		//for killing that lame xmlns that screws everything up
@@ -125,7 +128,7 @@ package com.iheart.stw {
 		}
 		
 		public function resolve(provider:StreamProvider, clip:Clip, successListener:Function):void {
-			var urlParts:Array = URLUtil.baseUrlAndRest(clip.url),
+			var urlParts:Array = URLUtil.baseUrlAndRest(clip.originalUrl),
 				stream:String = urlParts[0].replace('stw://', ''),
 				queryString:String = urlParts[1];
 			
